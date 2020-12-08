@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-
+using GoogleMobileAds.Api;
 public class GameManager : MonoBehaviour
 {
     public float levelStartDelay = 2f;
@@ -12,12 +12,14 @@ public class GameManager : MonoBehaviour
     public int playerFoodPoints = 100;
     [HideInInspector] public bool playersTurn = true;
 
+    private Text recordText;
     private Text levelText;
     private GameObject levelImage;
     private int level = 1;
     private List<Enemy> enemies;
     private bool enemiesMoving;
     private bool doingSetup;
+    private InterstitialAd interstitial;
     void Awake()
     {
         if (instance == null)
@@ -28,12 +30,21 @@ public class GameManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+        MobileAds.Initialize(initStatus => { });
+        RequestInterstitial();
         DontDestroyOnLoad(gameObject);
         enemies = new List<Enemy>();
         boarScript = GetComponent<BoardManager>();
         InitGame();
     }
-    private void OnLevelWasLoaded(int index)
+    private void RequestInterstitial()
+    {
+        string adUnitId = "ca-app-pub-6210545297762687/6388796299";
+        interstitial = new InterstitialAd(adUnitId);
+        AdRequest request = new AdRequest.Builder().Build();
+        interstitial.LoadAd(request);
+    }
+    private void OnLevelWasLoaded()
     {
         level++;
         InitGame();
@@ -52,13 +63,39 @@ public class GameManager : MonoBehaviour
     }
     public void GameOver()
     {
+        if (interstitial.IsLoaded() && level > 4)
+        {
+            interstitial.Show();
+        }
         levelText.text = "After " + level + " days, you dead!";
+        int lvlPrevRecord = PlayerPrefs.GetInt("LvlMax");
+        if (lvlPrevRecord < level)
+        {
+            recordText.text = "You Record : " + level + " days, you dead!";
+            PlayerPrefs.SetInt("LvlMax", level);
+        }
+        else
+        {
+            recordText.text = "You Record : " + lvlPrevRecord;
+        }
         levelImage.SetActive(true);
-        enabled = false;
+        Invoke("RestartLvl", levelStartDelay);
+        //enabled = false;
+    }
+
+    [System.Obsolete]
+    public void RestartLvl()
+    {
+        Application.LoadLevel(Application.loadedLevel);
+        recordText.text = null;
+        level = 0;
+        SoundManager.instance.musicSource.Play();
+        InitGame();
     }
     void InitGame()
     {
         doingSetup = true;
+        recordText = GameObject.Find("RecordText").GetComponent<Text>();
         levelImage = GameObject.Find("LevelImage");
         levelText = GameObject.Find("LevelText").GetComponent<Text>();
         levelText.text = "Day " + level;

@@ -122,6 +122,7 @@ public class Player : MovingObject
         }
     }
 
+    [System.Obsolete]
     private void Restart()
     {
         Application.LoadLevel(Application.loadedLevel);
@@ -137,6 +138,7 @@ public class Player : MovingObject
     {
         if (food <= 0)
         {
+            food = 100;       
             SoundManager.instance.PlaySingle(gameOverSound);
             SoundManager.instance.musicSource.Stop();
             GameManager.instance.GameOver();
